@@ -1,39 +1,42 @@
 import torch
+from PIL import Image
+import numpy as np
 import gradio as gr
 
-
 from config.core import config
-# from models.lightning import ConditionalWGAN_GP
+from utility.helper import load_model_weights, init_generator_model, get_selected_value
 
 DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-# model = ConditionalWGAN_GP.load_from_checkpoint(config.CHECKPOINT_PATH, map_location=DEVICE)
-
-# Define the mapping between display labels and values
-options_mapping = {
-    "Boot": 0,
-    "Sandal": 1,
-    "Shoe": 2
-}
-
-# Create a list of display labels for the dropdown
-options = list(options_mapping.keys())
-
-# Function to get the selected value based on the display label
-def get_selected_value(label):
-    return options_mapping[label]
+model = init_generator_model()
+model = load_model_weights(config.CKPT_PATH, model, DEVICE, "generator")
+model.eval()
 
 def inference(choice):
-    z = torch.randn(1, config.Z_DIM, 1, 1).to(DEVICE)
+    z = torch.randn(1, config.INPUT_Z_DIM, 1, 1).to(DEVICE)
     label = torch.tensor([get_selected_value(choice)], device=DEVICE)
 
-    print(f"Choice: {choice} => {label}")
-    print(z.shape)
+    image_tensor = model(z, label)
+
+    image_tensor = (image_tensor + 1) / 2  # Shift and scale to 0 to 1
+    image_unflat = image_tensor.detach().cpu().squeeze(0)  # Remove batch dimension
+    image = image_unflat.permute(1, 2, 0)  # Permute to (H, W, C)
+
+    # Convert image to numpy array
+    image_array = image.numpy()
+    
+    # Scale values to 0-255 range
+    image_array = (image_array * 255).astype(np.uint8)
+    
+    # Convert numpy array to PIL Image
+    image = Image.fromarray(image_array)
+
+    return image
 
 demo = gr.Interface(
     fn=inference,
-    inputs=gr.Dropdown(options, label="Select an option to Generates Images"),
-    outputs=gr.Image(shape=(128, 128)),
+    inputs=gr.Dropdown(choices=list(config.OPTIONS_MAPPING.keys()), label="Select an option to Generates Images"),
+    outputs=gr.Image(),
     title="Shoe, Sandal, Boot - Conditional GAN",
     description="Conditional WGAN-GP",
 )
