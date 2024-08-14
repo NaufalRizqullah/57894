@@ -1,3 +1,6 @@
-torch==2.1.2
-pytorch-lightning==2.3.3
+torch
+pytorch-lightning
 python-multipart
+fastapi
+pydantic
+pydantic-settings
