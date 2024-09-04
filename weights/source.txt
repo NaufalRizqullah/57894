@@ -1,2 +1,2 @@
-using a weight from kaggle after training 600 epoch:
-- https://www.kaggle.com/datasets/dimensioncore/conditional-gan-part-2/versions/1020
+using a weight from kaggle after training 957 epoch:
+- https://www.kaggle.com/datasets/dimensioncore/conditional-gan-part-2/versions/2397

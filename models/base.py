@@ -1,181 +1,100 @@
 import torch
 import torch.nn as nn
 
-class Discriminator(nn.Module):
-    """Discriminator model for Conditional GAN.
+
+class WSConv2d(nn.Module):
+    """
+    A 2D convolutional layer with weight scaling.
 
     Args:
-        num_classes (int): Number of classes in the dataset.
-        image_size (int): Size of the input images (assumes square images).
-        features_discriminator (int): Number of feature maps in the first layer of the discriminator.
-        image_channel (int): Number of channels in the input image.
-
-    Attributes:
-        disc (nn.Sequential): The sequential layers that define the discriminator.
-        embed (nn.Embedding): Embedding layer to encode labels into image-like format.
+        in_channels (int): Number of input channels.
+        out_channels (int): Number of output channels.
+        kernel_size (int, optional): Size of the convolving kernel. Default is 3.
+        stride (int, optional): Stride of the convolution. Default is 1.
+        padding (int, optional): Zero-padding added to both sides of the input. Default is 1.
+        gain (float, optional): Gain factor for weight scaling. Default is 2.
     """
 
-    def __init__(self, num_classes=3, image_size=128, features_discriminator=128, image_channel=3):
+    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1, gain=2):
         super().__init__()
-        
-        self.num_classes = num_classes
-        self.image_size = image_size
-        
-        label_channel = 1
-        
-        self.disc = nn.Sequential(
-            self._block_discriminator(image_channel + label_channel, features_discriminator, kernel_size=4, stride=2, padding=1),
-            self._block_discriminator(features_discriminator, features_discriminator, kernel_size=4, stride=2, padding=1),
-            self._block_discriminator(features_discriminator, features_discriminator * 2, kernel_size=4, stride=2, padding=1),
-            self._block_discriminator(features_discriminator * 2, features_discriminator * 4, kernel_size=4, stride=2, padding=1),
-            self._block_discriminator(features_discriminator * 4, features_discriminator * 4, kernel_size=4, stride=2, padding=1),
-            self._block_discriminator(features_discriminator * 4, 1, kernel_size=4, stride=1, padding=0, final_layer=True)
-        )
-        
-        self.embed = nn.Embedding(num_classes, image_size * image_size)
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding)
+        self.scale = (gain / (in_channels * (kernel_size ** 2))) ** 0.5
+        self.bias = self.conv.bias
+        self.conv.bias = None
 
-    def forward(self, image, label):
-        """Forward pass for the discriminator.
+        # Initialize Conv Layer
+        nn.init.normal_(self.conv.weight)
+        nn.init.zeros_(self.bias)
+
+    def forward(self, x):
+        """
+        Forward pass of the WSConv2d layer.
 
         Args:
-            image (torch.Tensor): Batch of input images.
-            label (torch.Tensor): Corresponding labels for the images.
+            x (torch.Tensor): Input tensor of shape (batch_size, in_channels, height, width).
 
         Returns:
-            torch.Tensor: Discriminator output.
+            torch.Tensor: Output tensor after applying convolution, weight scaling, and bias addition.
         """
-        # Embed label into an image-like format
-        embedding = self.embed(label)
-        embedding = embedding.view(
-            label.shape[0],
-            1,
-            self.image_size,
-            self.image_size
-        )  # Reshape into 1-channel image
-        
-        data = torch.cat([image, embedding], dim=1)  # Concatenate image with the label channel
-        
-        x = self.disc(data)
-        
-        return x.view(len(x), -1)
+        return self.conv(x * self.scale) + self.bias.view(1, self.bias.shape[0], 1, 1)
 
-    def _block_discriminator(self, input_channels, output_channels, kernel_size=3, stride=2, padding=0, final_layer=False):
-        """Creates a convolutional block for the discriminator.
 
-        Args:
-            input_channels (int): Number of input channels for the convolutional layer.
-            output_channels (int): Number of output channels for the convolutional layer.
-            kernel_size (int): Size of the kernel for the convolutional layer.
-            stride (int): Stride of the convolutional layer.
-            padding (int): Padding for the convolutional layer.
-            final_layer (bool): If True, this is the final layer, which doesn't include normalization or activation.
-
-        Returns:
-            nn.Sequential: Sequential block for the discriminator.
-        """
-        if not final_layer:
-            return nn.Sequential(
-                nn.Conv2d(input_channels, output_channels, kernel_size, stride, padding),
-                nn.InstanceNorm2d(output_channels, affine=True),
-                nn.LeakyReLU(0.2)
-            )
-        else:
-            return nn.Sequential(
-                nn.Conv2d(input_channels, output_channels, kernel_size, stride, padding),
-            )
-
-class Generator(nn.Module):
-    """Generator model for Conditional GAN.
+class PixelNorm(nn.Module):
+    """
+    Pixel normalization layer.
 
     Args:
-        embed_size (int): Size of the embedding vector for the labels.
-        num_classes (int): Number of classes in the dataset.
-        image_size (int): Size of the output images (assumes square images).
-        features_generator (int): Number of feature maps in the first layer of the generator.
-        input_dim (int): Dimensionality of the noise vector.
-        image_channel (int): Number of channels in the output image.
-
-    Attributes:
-        gen (nn.Sequential): The sequential layers that define the generator.
-        embed (nn.Embedding): Embedding layer to encode labels.
+        eps (float, optional): Small value to avoid division by zero. Default is 1e-8.
     """
 
-    def __init__(self, embed_size=128, num_classes=3, image_size=128, features_generator=128, input_dim=128, image_channel=3):
-        super(Generator, self).__init__()
+    def __init__(self, eps=1e-8):
+        super(PixelNorm, self).__init__()
+        self.epsilon = eps
 
-        self.gen = nn.Sequential(
-           self._block(input_dim + embed_size, features_generator * 2, first_double_up=True),
-           self._block(features_generator * 2, features_generator * 4, first_double_up=False, final_layer=False),
-           self._block(features_generator * 4, features_generator * 4, first_double_up=False, final_layer=False),
-           self._block(features_generator * 4, features_generator * 4, first_double_up=False, final_layer=False),
-           self._block(features_generator * 4, features_generator * 2, first_double_up=False, final_layer=False),
-           self._block(features_generator * 2, features_generator, first_double_up=False, final_layer=False),
-           self._block(features_generator, image_channel, first_double_up=False, use_double=False, final_layer=True),
-        )
-        
-        self.image_size = image_size
-        self.embed_size = embed_size
-        
-        self.embed = nn.Embedding(num_classes, embed_size)
-
-    def forward(self, noise, labels):
-        """Forward pass for the generator.
+    def forward(self, x):
+        """
+        Forward pass of the PixelNorm layer.
 
         Args:
-            noise (torch.Tensor): Batch of input noise vectors.
-            labels (torch.Tensor): Corresponding labels for the noise vectors.
+            x (torch.Tensor): Input tensor of shape (batch_size, channels, height, width).
 
         Returns:
-            torch.Tensor: Generated images.
+            torch.Tensor: Normalized tensor.
         """
-        embedding_label = self.embed(labels).unsqueeze(2).unsqueeze(3)  # Reshape to (batch_size, embed_size, 1, 1)
-        
-        noise = noise.view(noise.size(0), noise.size(1), 1, 1)  # Reshape to (batch_size, z_dim, 1, 1)
+        return x / torch.sqrt(torch.mean(x ** 2, dim=1, keepdim=True) + self.epsilon)
 
-        x = torch.cat([noise, embedding_label], dim=1)
-        
-        return self.gen(x)
 
-    def _block(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1,
-               first_double_up=False, use_double=True, final_layer=False):
-        """Creates a convolutional block for the generator.
+class ConvBlock(nn.Module):
+    """
+    A block of two convolutional layers, with optional pixel normalization and LeakyReLU activation.
+
+    Args:
+        in_channels (int): Number of input channels.
+        out_channels (int): Number of output channels.
+        use_pixelnorm (bool, optional): Whether to apply pixel normalization. Default is True.
+    """
+
+    def __init__(self, in_channels, out_channels, use_pixelnorm=True):
+        super(ConvBlock, self).__init__()
+        self.use_pn = use_pixelnorm
+        self.conv1 = WSConv2d(in_channels, out_channels)
+        self.conv2 = WSConv2d(out_channels, out_channels)
+        self.leaky = nn.LeakyReLU(0.2)
+        self.pn = PixelNorm()
+
+    def forward(self, x):
+        """
+        Forward pass of the ConvBlock.
 
         Args:
-            in_channels (int): Number of input channels for the convolutional layer.
-            out_channels (int): Number of output channels for the convolutional layer.
-            kernel_size (int): Size of the kernel for the convolutional layer.
-            stride (int): Stride of the convolutional layer.
-            padding (int): Padding for the convolutional layer.
-            first_double_up (bool): If True, the first layer uses a different upsampling strategy.
-            use_double (bool): If True, the block includes an upsampling layer.
-            final_layer (bool): If True, this is the final layer, which uses Tanh activation.
+            x (torch.Tensor): Input tensor of shape (batch_size, in_channels, height, width).
 
         Returns:
-            nn.Sequential: Sequential block for the generator.
+            torch.Tensor: Output tensor after two convolutional layers, optional pixel normalization, and LeakyReLU activation.
         """
-        layers = []
+        x = self.leaky(self.conv1(x))
+        x = self.pn(x) if self.use_pn else x
 
-        if not final_layer:
-            # Add first convolutional layer
-            layers.append(nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding))
-            layers.append(nn.BatchNorm2d(out_channels))
-            layers.append(nn.LeakyReLU(0.2))
-
-            # Add second convolutional layer
-            layers.append(nn.Conv2d(out_channels, out_channels, kernel_size, stride, padding))
-            layers.append(nn.BatchNorm2d(out_channels))
-            layers.append(nn.LeakyReLU(0.2))
-        else:
-            layers.append(nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding))
-            layers.append(nn.Tanh())
-
-        if use_double:
-            if first_double_up:
-                layers.append(nn.ConvTranspose2d(out_channels, out_channels, 4, 1, 0))
-            else:
-                layers.append(nn.ConvTranspose2d(out_channels, out_channels, 4, 2, 1))
-        
-            layers.append(nn.BatchNorm2d(out_channels))
-            layers.append(nn.LeakyReLU(0.2))
-
-        return nn.Sequential(*layers)
+        x = self.leaky(self.conv2(x))
+        x = self.pn(x) if self.use_pn else x
+        return x

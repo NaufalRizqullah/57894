@@ -23,7 +23,7 @@ class Config(BaseSettings):
 
     LOAD_CHECKPOINT: bool = True
     PATH_DATASET: str = ""
-    CKPT_PATH: str = "./weights/epoch=999-step=96000.ckpt"
+    CKPT_PATH: str = "./weights/epoch=957-step=1164300.ckpt"
 
     OPTIONS_MAPPING: dict = {
         "Boot": 0,

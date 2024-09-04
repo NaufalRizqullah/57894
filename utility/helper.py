@@ -1,7 +1,7 @@
 import torch
 
 from config.core import config
-from models.base import Generator
+from models.generator import Generator
 
 def load_model_weights(checkpoint_path, model, device, prefix):
     """
@@ -25,6 +25,9 @@ def load_model_weights(checkpoint_path, model, device, prefix):
     model.load_state_dict(model_weights)
 
     return model
+
+def load_latent_space(checkpoint_path):
+    pass
 
 def init_generator_model():
     """
