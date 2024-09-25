@@ -4,3 +4,5 @@ python-multipart
 fastapi
 pydantic
 pydantic-settings
+opencv-python==4.10.0
+imageio==2.33.1

@@ -2,15 +2,16 @@ from pydantic_settings import BaseSettings
 
 class Config(BaseSettings):
     IMAGE_CHANNEL: int = 3
+    LABEL_CHANNEL: int = 3
     NUM_CLASSES: int = 3
     IMAGE_SIZE: int = 128
-    FEATURES_DISCRIMINATOR: int = 64
-    FEATURES_GENERATOR: int = 64
-    EMBED_SIZE: int = 64
-    INPUT_Z_DIM: int = 64
-    BATCH_SIZE: int = 128
+    FEATURES_DISCRIMINATOR: int = 64 * 2
+    FEATURES_GENERATOR: int = 64 * 2
+    EMBED_SIZE: int = 30 + 20
+    INPUT_Z_DIM: int = 64 * 2
+    BATCH_SIZE: int = 20
     DISPLAY_STEP: int = 500
-    MAX_SAMPLES: int = 3000
+    MAX_SAMPLES: int = 2500
 
     LEARNING_RATE: float = 0.0002
     BETA_1: float = 0.5
@@ -22,8 +23,8 @@ class Config(BaseSettings):
     CRITIC_REPEAT: int = 3
 
     LOAD_CHECKPOINT: bool = True
-    PATH_DATASET: str = ""
-    CKPT_PATH: str = "./weights/epoch=957-step=1164300.ckpt"
+    PATH_DATASET: str = "/kaggle/input/shoe-vs-sandal-vs-boot-dataset-15k-images/Shoe vs Sandal vs Boot Dataset"
+    CKPT_PATH: str = "./weights/epoch=299-step=450000.ckpt"
 
     OPTIONS_MAPPING: dict = {
         "Boot": 0,
