@@ -37,6 +37,7 @@ This project implements a Conditional Generative Adversarial Network (CGAN) usin
 Despite the architectural compromises, the model produces reasonable results. However, the quality of the generated images may not be optimal due to the limited dataset and VRAM constraints.
 
 Here is an animated demonstration of the training progress.
+
 ![CWGAN-GP Animation](data/CWGAN-GP_animated.gif)
 
 ## Demo
