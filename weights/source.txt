@@ -1,2 +1,2 @@
-using a weight from kaggle after training 957 epoch:
-- https://www.kaggle.com/datasets/dimensioncore/conditional-gan-part-2/versions/2397
+- Notebook: [VERSION 19] https://www.kaggle.com/code/dimensioncore/57894-conditional-gan-try-part-2?scriptVersionId=197222851
+- Checkpoint: [VERSION 3016] https://www.kaggle.com/datasets/dimensioncore/conditional-gan-part-2/versions/3016

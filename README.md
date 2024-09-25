@@ -21,7 +21,7 @@ This project implements a Conditional Generative Adversarial Network (CGAN) usin
 ### Training Epochs
 ----------------
 
-* Approximately 1000 epochs
+* Approximately 300 epochs
 
 ### Model Architecture Compromises
 -----------------------------
