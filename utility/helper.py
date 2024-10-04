@@ -3,12 +3,58 @@ import torch.nn as nn
 import cv2
 import imageio
 import os
-import matplotlib.pyplot as plt
+import subprocess
 
 from config.core import config
-from models.generator import Generator
-from PIL import Image
-from torchvision.utils import make_grid
+from torchvision.utils import save_image
+
+
+def save_some_examples(generator_model, batch, epoch, folder_path=config.PATH_OUTPUT, num_images=15):
+    """
+    Save some examples of the generator's output.
+
+    Parameters:
+        generator_model (nn.Module): The generator model.
+        batch (tuple): The batch of input and target images as a tuple of tensors.
+        epoch (int): The current epoch.
+        folder_path (str): The folder path to save the examples to. Defaults to config.PATH_OUTPUT.
+        num_images (int): The number of images to save. Defaults to 15.
+    """
+    
+    # Ensure the folder exists
+    os.makedirs(folder_path, exist_ok=True)
+    
+    x, y = batch  # Unpack the batch
+    
+    # Limit the number of images to the specified num_images
+    x = x[:num_images]
+    y = y[:num_images]
+
+    generator_model.eval()
+
+    with torch.inference_mode():
+        y_fake = generator_model(x)
+        y_fake = y_fake * 0.5 + 0.5  # Remove normalization by tanh
+
+        # Create 3x5 grid for generated images
+        save_image(y_fake, folder_path + f"/y_gen_{epoch}.png", nrow=5)  # Save Generated Image
+
+        # Create 3x5 grid for input images
+        save_image(x * 0.5 + 0.5, folder_path + f"/input_{epoch}.png", nrow=5)  # Save Real Image
+
+    generator_model.train()
+
+def update_version_kaggle_dataset():
+    # Make Metadata json
+    subprocess.run(['kaggle', 'datasets', 'init'], check=True)
+
+    # Write new metadata
+    with open('/kaggle/working/dataset-metadata.json', 'w') as json_fid:
+        json_fid.write(f'{{\n  "title": "Update Logs Pix2Pix",\n  "id": "muhammadnaufal/pix2pix",\n  "licenses": [{{"name": "CC0-1.0"}}]}}')
+
+    # Push new version
+    subprocess.run(['kaggle', 'datasets', 'version', '-m', 'Updated Dataset', '--quiet', '--dir-mode', 'tar'], check=True)
+
 
 
 def load_model_weights(checkpoint_path, model, device, prefix):
@@ -34,41 +80,6 @@ def load_model_weights(checkpoint_path, model, device, prefix):
 
     return model
 
-def load_latent_space(checkpoint_path):
-    pass
-
-def init_generator_model():
-    """
-    Initializes and returns the Generator model.
-
-    Args:
-        None.
-
-    Returns:
-        Generator: The initialized Generator model.
-    """
-    model = Generator(
-        embed_size=config.EMBED_SIZE,
-        num_classes=config.NUM_CLASSES,
-        image_size=config.IMAGE_SIZE,
-        features_generator=config.FEATURES_GENERATOR,
-        input_dim=config.INPUT_Z_DIM,
-        image_channel=config.IMAGE_CHANNEL
-    )
-    return model
-
-def get_selected_value(label):
-    """
-    Get the selected value based on the display label.
-
-    Args:
-        label (str): The display label.
-
-    Returns:
-        int: The selected value corresponding to the display label.
-    """
-    # Get the selected value from the options mapping based on the display label.
-    return config.OPTIONS_MAPPING[label]
 
 def initialize_weights(model):
     """
@@ -85,19 +96,6 @@ def initialize_weights(model):
         if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d, nn.BatchNorm2d, nn.InstanceNorm2d)):
             nn.init.normal_(m.weight.data, 0.0, 0.02)
 
-def plot_images_from_tensor(image_tensor, num_images=25, size=(1, 28, 28), nrow=5, show=True, save_path=None):
-    image_tensor = (image_tensor + 1) / 2
-    image_unflat = image_tensor.detach().cpu()
-    image_grid = make_grid(image_unflat[:num_images], nrow=nrow)
-    plt.imshow(image_grid.permute(1, 2, 0).squeeze())
-    plt.axis('off')
-    if save_path:
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        plt.savefig(save_path, bbox_inches='tight', pad_inches=0)
-    if show:
-        plt.show()
-    else:
-        plt.close()
 
 def create_video(image_folder, video_name, fps, appearance_duration=None):
     """
@@ -190,35 +188,3 @@ def create_gif(image_folder, gif_name, fps, appearance_duration=None):
 
     # Save the repeated images as a GIF
     imageio.mimsave(gif_name, repeated_images, fps=fps)
-
-class PadToSquare:
-    """Pad an image to a square of the given size with a white background.
-
-    Args:
-        size (int): The target size for the output image.
-    """
-    
-    def __init__(self, size):
-        self.size = size
-    
-    def __call__(self, img):
-        """Pad the input image to the target size with a white background.
-
-        Args:
-            img (PIL.Image.Image): The input image.
-
-        Returns:
-            PIL.Image.Image: The padded image.
-        """
-        # Create a white canvas
-        white_canvas = Image.new('RGB', (self.size, self.size), (255, 255, 255))
-
-        # Calculate the position to paste the image onto the white canvas
-        left = (self.size - img.width) // 2
-        top = (self.size - img.height) // 2
-
-        # Paste the image onto the canvas
-        white_canvas.paste(img, (left, top))
-
-        return white_canvas
-    

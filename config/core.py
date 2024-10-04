@@ -1,35 +1,24 @@
 from pydantic_settings import BaseSettings
 
 class Config(BaseSettings):
-    IMAGE_CHANNEL: int = 3
-    LABEL_CHANNEL: int = 3
-    NUM_CLASSES: int = 3
-    IMAGE_SIZE: int = 128
-    FEATURES_DISCRIMINATOR: int = 64 * 2
-    FEATURES_GENERATOR: int = 64 * 2
-    EMBED_SIZE: int = 30 + 20
-    INPUT_Z_DIM: int = 64 * 2
-    BATCH_SIZE: int = 20
+    PATH_FACE: str = "/kaggle/input/comic-faces-paired-synthetic-v2/face2comics_v2.0.0_by_Sxela/face2comics_v2.0.0_by_Sxela/faces"
+    PATH_COMIC: str = "/kaggle/input/comic-faces-paired-synthetic-v2/face2comics_v2.0.0_by_Sxela/face2comics_v2.0.0_by_Sxela/comics"
+    PATH_OUTPUT: str ="/kaggle/working/generates"
+
+    FEATURE_DISCRIMINATOR: list = [64, 128, 256, 512]
+    FEATURE_GENERATOR: int = 64
+
+    IMAGE_SIZE: int = 256
+    BATCH_SIZE: int = 128
     DISPLAY_STEP: int = 500
-    MAX_SAMPLES: int = 2500
+    MAX_SAMPLES: int = 5000
 
-    LEARNING_RATE: float = 0.0002
-    BETA_1: float = 0.5
-    BETA_2: float = 0.999
-    C_LAMBDA: int = 10
+    LEARNING_RATE: float = 2e-4
+    L1_LAMBDA: int = 100
+    NUM_EPOCH: int = 500
 
-    NUM_EPOCH: int = 200 * 5
+    LOAD_CHECKPOINT: bool = False
+    CKPT_PATH: str = ""
 
-    CRITIC_REPEAT: int = 3
-
-    LOAD_CHECKPOINT: bool = True
-    PATH_DATASET: str = "/kaggle/input/shoe-vs-sandal-vs-boot-dataset-15k-images/Shoe vs Sandal vs Boot Dataset"
-    CKPT_PATH: str = "./weights/epoch=299-step=450000.ckpt"
-
-    OPTIONS_MAPPING: dict = {
-        "Boot": 0,
-        "Sandal": 1,
-        "Shoe": 2
-    }
 
 config = Config()

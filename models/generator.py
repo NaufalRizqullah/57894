@@ -1,73 +1,68 @@
 import torch
 import torch.nn as nn
 
-from .base import WSConv2d, ConvBlock, PixelNorm
-from config.core import config
+from models.base import Block
 
 
 class Generator(nn.Module):
-    def __init__(self,  embed_size=128, num_classes=3, image_size=128, features_generator=128, input_dim=128, image_channel=3):
+    def __init__(self, in_channels=3, features=64):
         super().__init__()
 
-        self.gen = nn.Sequential(
-           self._block(input_dim + embed_size, features_generator*2, first_double_up=True),
-           self._block(features_generator*2, features_generator*4, first_double_up=False, final_layer=False,),
-           self._block(features_generator*4, features_generator*4, first_double_up=False, final_layer=False,),
-           self._block(features_generator*4, features_generator*4, first_double_up=False, final_layer=False,),
-           self._block(features_generator*4, features_generator*2, first_double_up=False, final_layer=False,),
-           self._block(features_generator*2, features_generator, first_double_up=False, final_layer=False,),
-           self._block(features_generator, image_channel, first_double_up=False, use_double=False, final_layer=True,),
+        self.initial_down = nn.Sequential(
+            nn.Conv2d(in_channels, features, 4, 2, 1, padding_mode="reflect"),
+            nn.LeakyReLU(0.2),
         )
-        
-        self.image_size = image_size
-        self.embed_size = embed_size
-        
-        self.embed = nn.Embedding(num_classes, embed_size)
-        self.embed_linear = nn.Linear(embed_size, embed_size)
 
-    def forward(self, noise, labels):
-        embedding_label = self.embed(labels)
-        linear_embedding_label = self.embed_linear(embedding_label).unsqueeze(2).unsqueeze(3)
-        
-        noise = noise.view(noise.size(0), noise.size(1), 1, 1)
-        
-        x = torch.cat([noise, linear_embedding_label], dim=1)
-        
-        return self.gen(x)
+        self.down1 = Block(features, features * 2, down=True, act="leaky", use_dropout=False)
+        self.down2 = Block(features * 2, features * 4, down=True, act="leaky", use_dropout=False)
+        self.down3 = Block(features * 4, features * 8, down=True, act="leaky", use_dropout=False)
+        self.down4 = Block(features * 8, features * 8, down=True, act="leaky", use_dropout=False)
+        self.down5 = Block(features * 8, features * 8, down=True, act="leaky", use_dropout=False)
+        self.down6 = Block(features * 8, features * 8, down=True, act="leaky", use_dropout=False)
 
+        self.bottleneck = nn.Sequential(
+            nn.Conv2d(features * 8, features * 8, 4, 2, 1),
+            nn.ReLU()
+        )
 
-    def _block(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1,
-           first_double_up=False, use_double=True, final_layer=False):
-        layers = []
+        self.up1 = Block(features * 8, features * 8, down=False, act="relu", use_dropout=True)
+        self.up2 = Block(features * 8 * 2, features * 8, down=False, act="relu", use_dropout=True)
+        self.up3 = Block(features * 8 * 2, features * 8, down=False, act="relu", use_dropout=True)
+        self.up4 = Block(features * 8 * 2, features * 8, down=False, act="relu", use_dropout=False)
+        self.up5 = Block(features * 8 * 2, features * 4, down=False, act="relu", use_dropout=False)
+        self.up6 = Block(features * 4 * 2, features * 2, down=False, act="relu", use_dropout=False)
+        self.up7 = Block(features * 2 * 2, features, down=False, act="relu", use_dropout=False)
 
-        if not final_layer:
-            layers.append(ConvBlock(in_channels, out_channels))
-        else:
-            layers.append(WSConv2d(in_channels, out_channels, kernel_size, stride, padding))
-            layers.append(nn.Tanh())
+        self.final_up = nn.Sequential(
+            nn.ConvTranspose2d(features * 2, in_channels, kernel_size=4, stride=2, padding=1),
+            nn.Tanh(),
+        )
 
-        if use_double:
-            if first_double_up:
-                layers.append(nn.ConvTranspose2d(out_channels, out_channels, 4, 1, 0))
-            else:
-                layers.append(nn.ConvTranspose2d(out_channels, out_channels, 4, 2, 1))
+    def forward(self, x):
+        d1 = self.initial_down(x)
+        d2 = self.down1(d1)
+        d3 = self.down2(d2)
+        d4 = self.down3(d3)
+        d5 = self.down4(d4)
+        d6 = self.down5(d5)
+        d7 = self.down6(d6)
 
-            layers.append(PixelNorm())
-            layers.append(nn.LeakyReLU(0.2))
+        bottleneck = self.bottleneck(d7)
 
-        return nn.Sequential(*layers)
+        up1 = self.up1(bottleneck)
+        up2 = self.up2(torch.cat([up1, d7], 1))
+        up3 = self.up3(torch.cat([up2, d6], 1))
+        up4 = self.up4(torch.cat([up3, d5], 1))
+        up5 = self.up5(torch.cat([up4, d4], 1))
+        up6 = self.up6(torch.cat([up5, d3], 1))
+        up7 = self.up7(torch.cat([up6, d2], 1))
+
+        final_up = self.final_up(torch.cat([up7, d1], 1))
+
+        return final_up
 
 def test():
-    sample = torch.randn(1, config.INPUT_Z_DIM, 1, 1)
-    label = torch.tensor([1])
-
-    model = Generator(
-                embed_size=config.EMBED_SIZE,
-                num_classes=config.NUM_CLASSES,
-                image_size=config.IMAGE_SIZE,
-                features_generator=config.FEATURES_GENERATOR,
-                input_dim=config.INPUT_Z_DIM,
-            )
-
-    preds = model(sample, label)
-    print(preds.shape)
+    # Test Case for Generator Model
+    x = torch.randn((1, 3, 256, 256))
+    gen = Generator()
+    print(f"Generator Output Shape: {gen(x).shape}")
