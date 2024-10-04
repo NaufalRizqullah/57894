@@ -9,8 +9,9 @@ from data.dataloader import FaceToComicDataModule
 
 # Add argparser for config params
 parser = argparse.ArgumentParser()
-parser.add_argument("--load_checkpoint", type=bool, default=config.LOAD_CHECKPOINT)
-parser.add_argument("--ckpt_path", type=str, default=config.CKPT_PATH)
+parser.add_argument("--load_checkpoint", action='store_true', help="Load checkpoint if this flag is set")
+parser.add_argument("--no_load_checkpoint", action='store_false', dest='load_checkpoint', help="Do not load checkpoint")
+parser.add_argument("--ckpt_path", type=str, default=config.CKPT_PATH, help="Path to checkpoint file")
 parser.add_argument("--learning_rate", type=float, default=config.LEARNING_RATE)
 parser.add_argument("--l1_lambda", type=int, default=config.L1_LAMBDA)
 parser.add_argument("--features_discriminator", type=int, nargs='+', default=config.FEATURE_DISCRIMINATOR)
@@ -25,7 +26,7 @@ parser.add_argument("--max_samples", type=int, default=config.MAX_SAMPLES)
 
 args = parser.parse_args()
 
-config.LOAD_CHECKPOINT = args.load_checkpoint
+config.LOAD_CHECKPOINT = args.load_checkpoint if args.load_checkpoint is not None else config.LOAD_CHECKPOINT
 config.CKPT_PATH = args.ckpt_path
 config.LEARNING_RATE = args.learning_rate
 config.L1_LAMBDA = args.l1_lambda
