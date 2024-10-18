@@ -6,6 +6,7 @@ import os
 import subprocess
 
 from config.core import config
+from models.generator import Generator
 from torchvision.utils import save_image
 
 
@@ -56,6 +57,23 @@ def update_version_kaggle_dataset():
     subprocess.run(['kaggle', 'datasets', 'version', '-m', 'Updated Dataset', '--quiet', '--dir-mode', 'tar'], check=True)
 
 
+def init_generator_model():
+    """
+    Initializes and returns the Generator model.
+
+    Args:
+        None.
+
+    Returns:
+        Generator: The initialized Generator model.
+    """
+    model = Generator(
+        in_channels=config.IMAGE_CHANNELS,
+        features=config.FEATURE_GENERATOR,
+    )
+
+    return model
+    
 
 def load_model_weights(checkpoint_path, model, device, prefix):
     """
