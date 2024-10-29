@@ -1,0 +1,17 @@
+epoch: 200
+batch_size: 16
+
+image_channels: 3
+learning_rate: 1e-5
+lambda_cycle: 10
+lambda_identity: 0.0  # 0 cause we dont use
+
+summer_path: "/kaggle/input/summer2winter-yosemite/trainA"
+winter_path: "/kaggle/input/summer2winter-yosemite/trainB"
+folder_output: "/kaggle/working/generates"
+
+display_step: 500
+load_checkpoint: False
+ckpt_path: ""
+run_dev: false
+
