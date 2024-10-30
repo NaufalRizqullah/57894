@@ -1,5 +1,6 @@
 import argparse
 import lightning as L
+import os
 
 import src.common.tools as tools
 from src.models.train_model import CycleGAN
@@ -45,7 +46,8 @@ def train(config):
         trainer.fit(model, datamodule=dm)
 
 if __name__ == "__main__":
-    config = tools.load_config("./config.yaml")
+    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.yaml")
+    config = tools.load_config(config_path)
     
     # Add argparser for config params
     parser = argparse.ArgumentParser()
