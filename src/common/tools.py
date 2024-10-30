@@ -1,6 +1,6 @@
 import yaml
 
-def load_config():
+def load_config(path):
     """
     Load configuration from a yaml file.
 
@@ -11,7 +11,7 @@ def load_config():
     config : dict
         A dictionary containing the configuration loaded from the yaml file.
     """
-    with open('config.yaml') as p:
+    with open(path) as p:
         config = yaml.safe_load(p)
     
     return config

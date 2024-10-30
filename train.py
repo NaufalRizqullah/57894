@@ -45,7 +45,7 @@ def train(config):
         trainer.fit(model, datamodule=dm)
 
 if __name__ == "__main__":
-    config = tools.load_config()
+    config = tools.load_config("./config.yaml")
     
     # Add argparser for config params
     parser = argparse.ArgumentParser()
