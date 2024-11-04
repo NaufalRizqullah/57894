@@ -6,10 +6,10 @@ import lightning as L
 
 from src.features.discriminator import Discriminator
 from src.features.generator import Generator
-from src.visualization.visualize import save_some_examples
+from src.visualization.visualize import save_cycle_consistency_examples
 
 class CycleGAN(L.LightningModule):
-    def __init__(self, image_channels, learning_rate, lambda_cycle, lambda_identity):
+    def __init__(self, image_channels, learning_rate, lambda_cycle, lambda_identity, folder_output, display_step):
         super().__init__()
         # to note: Horse/H = X, Zebra/Z = Y
         self.automatic_optimization = False
@@ -68,9 +68,6 @@ class CycleGAN(L.LightningModule):
         
         # Get X and Y
         X, Y = batch
-        
-        # Get the current batch size
-        batch_size = X.shape[0]
         
         ##################################
         # Train Discriminator X and Y ####
@@ -148,5 +145,13 @@ class CycleGAN(L.LightningModule):
         self.generator_losses.append(generator_loss.item())
         self.discriminator_losses.append(discriminator_loss.item())
 
-        # TODO: Add save image per display_step
-        # but after see, some tricky to display a cycle-gan
+        
+        # Visualize the training
+        if self.curr_step % self.hparams.display_step == 0 and self.curr_step > 0:
+            save_cycle_consistency_examples(
+                self.generator_H,
+                self.generator_Z,
+                batch,
+                self.current_epoch,
+                self.hparams.folder_output,
+            )

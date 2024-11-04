@@ -15,7 +15,9 @@ def train(config):
         image_channels=config["image_channels"],
         learning_rate=config["learning_rate"],
         lambda_cycle=config["lambda_cycle"],
-        lambda_identity=config["lambda_identity"]
+        lambda_identity=config["lambda_identity"],
+        folder_output=config["folder_output"],
+        display_step=config["display_step"]
     )
 
     # Setup Trainer
