@@ -57,7 +57,7 @@ def save_cycle_consistency_examples(generator_G, generator_F, batch, epoch, fold
     
     os.makedirs(folder_path, exist_ok=True)
     
-    x, _ = batch  # Unpack the batch; y can be ignored for this example.
+    x, y = batch  # Unpack the batch; y can be ignored for this example.
     
     x = x[:num_images]  # Limit to the specified number of images
     
@@ -78,6 +78,7 @@ def save_cycle_consistency_examples(generator_G, generator_F, batch, epoch, fold
         combined = torch.cat((x, G_x, F_G_x), dim=0)
 
         # Save the combined grid of images (3 rows: input, output, reconstruction)
+        # so per image column is input(summer), output and reconstruction (to winter)
         save_image(combined, folder_path + f"/cycle_consistency_{epoch}.png", nrow=num_images)
 
     generator_G.train()
