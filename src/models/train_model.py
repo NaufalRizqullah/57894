@@ -155,3 +155,5 @@ class CycleGAN(L.LightningModule):
                 self.current_epoch,
                 self.hparams.folder_output,
             )
+        
+        self.curr_step += 1
